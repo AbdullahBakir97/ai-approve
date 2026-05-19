@@ -1,0 +1,16 @@
+{
+  "name": "AI Approve",
+  "url": "https://github.com/AbdullahBakir97/ai-approve",
+  "hook_attributes": {
+    "active": false
+  },
+  "public": true,
+  "redirect_url": "https://github.com/AbdullahBakir97/ai-approve/blob/main/app/INSTALL.md",
+  "default_events": [],
+  "default_permissions": {
+    "contents": "write",
+    "pull_requests": "write",
+    "issues": "write",
+    "metadata": "read"
+  }
+}
