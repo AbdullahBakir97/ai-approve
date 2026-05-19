@@ -1,0 +1,57 @@
+{
+  "branch_disagreements": [],
+  "branch_runs": {
+    "cross_pr_conflict": {
+      "avg_duration_s": 0,
+      "avg_tokens_in": 0,
+      "count": 0
+    },
+    "migration_deep": {
+      "avg_duration_s": 0,
+      "avg_tokens_in": 0,
+      "count": 0
+    },
+    "security": {
+      "avg_duration_s": 0,
+      "avg_tokens_in": 0,
+      "count": 0
+    },
+    "standard": {
+      "avg_duration_s": 0,
+      "avg_tokens_in": 0,
+      "count": 0
+    },
+    "test_stubs": {
+      "avg_duration_s": 0,
+      "avg_tokens_in": 0,
+      "count": 0
+    }
+  },
+  "by_app": {},
+  "calibration": {},
+  "comments": {
+    "posted": 0,
+    "resolved_with_fix": 0,
+    "resolved_without_fix": 0,
+    "still_open": 0
+  },
+  "generated_at": null,
+  "hot_dismissed_categories": [],
+  "schema_version": 2,
+  "total_reviews": 0,
+  "verdicts": {
+    "APPROVE": {
+      "count": 0,
+      "human_overrode": 0,
+      "merged_cleanly": 0
+    },
+    "COMMENT": {
+      "count": 0
+    },
+    "REQUEST_CHANGES": {
+      "count": 0,
+      "human_dismissed": 0,
+      "led_to_fix": 0
+    }
+  }
+}
