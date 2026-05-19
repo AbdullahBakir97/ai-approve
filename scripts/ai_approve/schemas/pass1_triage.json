@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["complexity", "deep_review_files", "reasoning"],
+  "properties": {
+    "complexity": { "type": "string", "enum": ["trivial", "standard", "risky"] },
+    "deep_review_files": {
+      "type": "array",
+      "maxItems": 10,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "reasoning": { "type": "string", "maxLength": 500 }
+  }
+}
