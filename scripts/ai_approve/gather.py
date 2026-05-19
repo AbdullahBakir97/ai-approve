@@ -3,8 +3,8 @@
 Outputs a single dict consumed by hard_blocks, triage, and deep_review.
 """
 from __future__ import annotations
+
 import json
-import logging
 import re
 import subprocess
 import sys
@@ -79,7 +79,7 @@ def gather(repo: str, pr_number: int) -> dict:
     base_sha = meta["baseRefOid"]
     title = meta.get("title", "")
     body = meta.get("body") or ""
-    labels = [l["name"] for l in (meta.get("labels") or [])]
+    labels = [lbl["name"] for lbl in (meta.get("labels") or [])]
     is_draft = bool(meta.get("isDraft"))
     author_login = (meta.get("author") or {}).get("login") or ""
     changed_files = [f["path"] for f in (meta.get("files") or [])]
@@ -101,8 +101,8 @@ def gather(repo: str, pr_number: int) -> dict:
             file=sys.stderr,
         )
     diff = diff_raw[:MAX_DIFF_BYTES]
-    diff_added_lines = [l[1:] for l in diff.splitlines() if l.startswith("+") and not l.startswith("+++")]
-    diff_removed_lines = [l[1:] for l in diff.splitlines() if l.startswith("-") and not l.startswith("---")]
+    diff_added_lines = [line[1:] for line in diff.splitlines() if line.startswith("+") and not line.startswith("+++")]
+    diff_removed_lines = [line[1:] for line in diff.splitlines() if line.startswith("-") and not line.startswith("---")]
     lines_changed = len(diff_added_lines) + len(diff_removed_lines)
 
     # 3. CLAUDE.md (the project's living convention doc)

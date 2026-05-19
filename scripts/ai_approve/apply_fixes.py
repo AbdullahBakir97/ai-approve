@@ -8,7 +8,7 @@ Allowed tools (v1 allowlist):
   ruff_format, ruff_fix, isort, i18n_linter
 """
 from __future__ import annotations
-import re
+
 import subprocess
 from pathlib import Path
 

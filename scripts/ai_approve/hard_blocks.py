@@ -3,6 +3,7 @@
 Run BEFORE any LLM call. Cannot be overridden by the LLM. See spec §8.
 """
 from __future__ import annotations
+
 import re
 
 HARD_BLOCK_RULES: list[dict] = [

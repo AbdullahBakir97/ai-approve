@@ -1,0 +1,13 @@
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# Default rule set; explicitly enable common categories.
+select = ["E", "W", "F", "I", "UP"]
+# Allow Pylint-style line-too-long because some prompts are long
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files may import names used implicitly (fixtures, pytest collection)
+"scripts/ai_approve/tests/*.py" = ["F401"]

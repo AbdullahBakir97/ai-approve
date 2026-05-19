@@ -11,12 +11,14 @@ Returns:
   }
 """
 from __future__ import annotations
+
 import json
 from pathlib import Path
-from typing import Any
-from jsonschema import validate as jsonschema_validate, ValidationError
 
-from .models_client import chat_completion, ModelsHTTPError
+from jsonschema import ValidationError
+from jsonschema import validate as jsonschema_validate
+
+from .models_client import chat_completion
 
 HERE = Path(__file__).parent
 PROMPT_PATH = HERE / "prompts" / "pass1_triage_system.md"

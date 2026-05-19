@@ -4,7 +4,8 @@ This is the safety contract that makes the bot fail-closed. Every
 condition that could let an unsafe APPROVE through must be covered here.
 """
 import pytest
-from ai_approve.conservative_gate import final_verdict, VerifierState
+
+from ai_approve.conservative_gate import VerifierState, final_verdict
 
 
 def make_pass2(verdict="APPROVE", confidence=0.95, certainty="fully_understood"):

@@ -5,9 +5,12 @@ Returns {drops: [...], concerns: [...]}. Drops are applied; non-empty
 concerns set self_critique_flagged_concerns=True in the verifier state.
 """
 from __future__ import annotations
+
 import json
 from pathlib import Path
-from jsonschema import validate as jsonschema_validate, ValidationError
+
+from jsonschema import ValidationError
+from jsonschema import validate as jsonschema_validate
 
 from .models_client import chat_completion
 

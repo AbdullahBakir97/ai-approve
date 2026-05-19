@@ -4,11 +4,17 @@ The bot embeds JSON inside an HTML comment marker so it survives across
 workflow runs without using ephemeral workflow artifacts.
 """
 import json
+
 import pytest
+
 from ai_approve.state import (
-    MARKER_START, MARKER_END,
-    serialize_state, parse_state, embed_in_comment, extract_from_comment,
+    MARKER_END,
+    MARKER_START,
+    embed_in_comment,
     empty_state,
+    extract_from_comment,
+    parse_state,
+    serialize_state,
 )
 
 
