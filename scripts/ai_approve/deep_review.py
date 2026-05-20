@@ -15,15 +15,26 @@ from pathlib import Path
 from jsonschema import ValidationError
 from jsonschema import validate as jsonschema_validate
 
-from .models_client import chat_completion
+from .models_client import ModelsHTTPError, RateLimitedError, chat_completion
 from .tools import TOOL_SCHEMAS, dispatch
 
 HERE = Path(__file__).parent
 PROMPT_PATH = HERE / "prompts" / "pass2_deep_review_system.md"
 SCHEMA_PATH = HERE / "schemas" / "pass2_deep_review.json"
 
-MODEL = "gpt-4o"
+# Plan 2: gpt-4.1 has 1M context; Llama 3.1 405B (128K) is the fallback when
+# OpenAI quota is exhausted. Both support function tool use.
+MODEL = "openai/gpt-4.1"
+FALLBACK_MODEL = "meta/Meta-Llama-3.1-405B-Instruct"
 MAX_TOOL_CALLS = 10
+
+
+def _chat_with_fallback(**kwargs):
+    """Try primary MODEL; on rate-limit or 5xx, retry once with FALLBACK_MODEL."""
+    try:
+        return chat_completion(model=MODEL, **kwargs)
+    except (RateLimitedError, ModelsHTTPError):
+        return chat_completion(model=FALLBACK_MODEL, **kwargs)
 
 
 def _load_schema() -> dict:
@@ -96,8 +107,7 @@ def run_deep_review(
     #   - Model stops calling tools (with or without content) → break to finalize
     #   - Tool budget exhausted → break to finalize with the exhausted flag
     for iteration in range(MAX_TOOL_CALLS):
-        result = chat_completion(
-            model=MODEL,
+        result = _chat_with_fallback(
             token=token,
             messages=messages,
             tools=TOOL_SCHEMAS,
@@ -160,8 +170,7 @@ def run_deep_review(
             ),
         })
 
-    finalize = chat_completion(
-        model=MODEL,
+    finalize = _chat_with_fallback(
         token=token,
         messages=messages,
         tools=None,

@@ -17,7 +17,7 @@ from .models_client import chat_completion
 HERE = Path(__file__).parent
 PROMPT_PATH = HERE / "prompts" / "critique_system.md"
 SCHEMA_PATH = HERE / "schemas" / "critique.json"
-MODEL = "gpt-4o-mini"
+MODEL = "openai/gpt-4.1-mini"
 
 
 def _load_schema() -> dict:
