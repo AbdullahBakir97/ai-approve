@@ -24,7 +24,8 @@ HERE = Path(__file__).parent
 PROMPT_PATH = HERE / "prompts" / "pass1_triage_system.md"
 SCHEMA_PATH = HERE / "schemas" / "pass1_triage.json"
 
-MODEL = "gpt-4o-mini"
+# GitHub Models slug. Plan 2: nano has bigger context + generous low-tier quota.
+MODEL = "openai/gpt-4.1-nano"
 
 
 def _load_schema() -> dict:

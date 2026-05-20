@@ -18,6 +18,12 @@ from pathlib import Path
 
 from . import calibration, summary
 from .apply_fixes import apply_fixes
+from .branches.aggregator import aggregate_branch_verdicts
+from .branches.cross_pr import run_cross_pr_branch
+from .branches.dispatcher import select_branches
+from .branches.migration import run_migration_branch
+from .branches.security import run_security_branch
+from .branches.test_stubs import run_test_stubs_branch
 from .conservative_gate import VerifierState, final_verdict
 from .critique import run_critique
 from .deep_review import run_deep_review
@@ -25,6 +31,7 @@ from .gather import gather
 from .hard_blocks import evaluate as evaluate_hard_blocks
 from .models_client import ModelsHTTPError, RateLimitedError
 from .post_review import inline_body_for_comment, post_review, render_body
+from .reasoning import evaluate_borderline
 from .skip_checks import should_skip
 from .state import embed_in_comment, empty_state, extract_from_comment
 from .triage import run_triage
@@ -134,6 +141,23 @@ def main() -> int:
             + ("\n".join(f"- {r}" for r in hb["rule_ids"]) if hb["rule_ids"] else "_(no rules triggered)_")
         )
 
+        # 3b. BORDERLINE REASONING (Plan 2): for edge-case PRs near a
+        # hard-block threshold, escalate to DeepSeek-R1 for a reasoning-tier
+        # decision on whether to hard-block or let Pass 2 handle it.
+        if hb.get("borderline") and not hb["hard_blocked"]:
+            borderline_decision = evaluate_borderline(
+                borderline_reasons=hb["borderline_reasons"],
+                pr=pr, token=token,
+            )
+            if borderline_decision["should_hard_block"]:
+                hb["hard_blocked"] = True
+                hb["reasons"].append(borderline_decision["reasoning"])
+                hb["rule_ids"].append("borderline_escalated")
+            sections["Borderline reasoning"] = (
+                f"decision={'escalate' if borderline_decision['should_hard_block'] else 'proceed'}\n"
+                f"reasoning: {borderline_decision['reasoning']}"
+            )
+
         # 4. PASS 1 — TRIAGE
         try:
             triage = run_triage(
@@ -197,74 +221,95 @@ def main() -> int:
             if lessons_md and len(lessons_md) > 1500:
                 lessons_md = lessons_md[:1500] + "\n[... lessons truncated ...]"
 
-            # GitHub Models free-tier 8K-token request limit is the hard
-            # constraint. Empirically system prompt (~580 tok) + tool
-            # schemas (~400 tok) + lessons (≤375 tok) = ~1350 tok base.
-            # Leave ~3500 tok for input, ~3000 tok for output.
-            #
-            # CLAUDE.md is deliberately NOT included in Pass 2 (it's 33KB
-            # alone — see deep_review._user_prompt for rationale). The
-            # bot's project-specific knowledge funnels through lessons.md
-            # instead, which grows over time.
-            MAX_AUDIT_DOC_CHARS = 800       # ~200 tokens
-            MAX_DEEP_FILE_CHARS = 2000      # ~500 tokens per file
-            MAX_DIFF_CHARS_PASS2 = 5000     # ~1250 tokens
-            MAX_DEEP_FILES = 2              # cap to two for budget safety
-            MAX_BODY_CHARS = 1200           # ~300 tokens
+            # Plan 2: gpt-4.1 has 1M context. We no longer need aggressive
+            # trimming. Caps now match practical I/O budgets, not LLM request
+            # limits. CLAUDE.md is BACK in the Pass 2 user prompt — see
+            # deep_review._user_prompt (Task 19 re-enables it).
+            MAX_CLAUDE_MD_CHARS  = 50000   # full CLAUDE.md (~12K tokens)
+            MAX_AUDIT_DOC_CHARS  = 20000
+            MAX_DIFF_CHARS_PASS2 = 200000  # bumped to gather.py's hard cap
+            MAX_DEEP_FILE_CHARS  = 30000
+            MAX_DEEP_FILES       = 10      # back to schema max
+            MAX_BODY_CHARS       = 4000
 
+            if pr.get("claude_md") and len(pr["claude_md"]) > MAX_CLAUDE_MD_CHARS:
+                pr["claude_md"] = pr["claude_md"][:MAX_CLAUDE_MD_CHARS] + "\n[... truncated ...]"
             if pr.get("body") and len(pr["body"]) > MAX_BODY_CHARS:
                 pr["body"] = pr["body"][:MAX_BODY_CHARS] + "\n[... body truncated ...]"
             if pr.get("audit_doc") and len(pr["audit_doc"]) > MAX_AUDIT_DOC_CHARS:
-                pr["audit_doc"] = (
-                    pr["audit_doc"][:MAX_AUDIT_DOC_CHARS]
-                    + "\n\n[... truncated ...]"
-                )
+                pr["audit_doc"] = pr["audit_doc"][:MAX_AUDIT_DOC_CHARS] + "\n[... truncated ...]"
             if pr.get("diff") and len(pr["diff"]) > MAX_DIFF_CHARS_PASS2:
-                pr["diff"] = (
-                    pr["diff"][:MAX_DIFF_CHARS_PASS2]
-                    + "\n\n[... diff truncated for 8K-token request limit ...]"
-                )
+                pr["diff"] = pr["diff"][:MAX_DIFF_CHARS_PASS2] + "\n[... diff truncated ...]"
 
             deep_files_content = {}
-            for fp in triage["deep_review_files"][:MAX_DEEP_FILES]:
-                p = repo_root / fp
-                if p.exists() and p.is_file():
-                    deep_files_content[fp] = p.read_text(encoding="utf-8", errors="replace")[:MAX_DEEP_FILE_CHARS]
+            for fp in (triage.get("deep_review_files") or [])[:MAX_DEEP_FILES]:
+                p_path = repo_root / fp
+                if p_path.exists() and p_path.is_file():
+                    deep_files_content[fp] = p_path.read_text(encoding="utf-8", errors="replace")[:MAX_DEEP_FILE_CHARS]
+
+            # PLAN 2: dispatch multiple specialized review branches in addition to standard
+            selected = select_branches({"changed_files": pr["changed_files"]})
+            sections["Branches selected"] = ", ".join(selected)
+
+            branch_outputs: dict[str, dict] = {}
+
+            # standard branch — existing Pass 2 logic
             try:
-                pass2 = run_deep_review(
+                branch_outputs["standard"] = run_deep_review(
                     pr=pr, lessons_md=lessons_md,
                     deep_files_content=deep_files_content,
                     repo_root=repo_root, token=token,
                 )
-                vs.tool_calls_exhausted = pass2.get("tool_calls_exhausted", False)
-                sections["Pass 2 (deep)"] = (
-                    f"verdict={pass2['verdict']}, confidence={pass2['confidence']}, "
-                    f"certainty={pass2['certainty']}, "
-                    f"tools_used={pass2['tool_calls_used']}/10, "
-                    f"in={pass2['tokens_in_total']}/out={pass2['tokens_out_total']}"
-                )
+                vs.tool_calls_exhausted = branch_outputs["standard"].get("tool_calls_exhausted", False)
             except RateLimitedError:
                 vs.rate_limited = True
-                pass2 = {
+                branch_outputs["standard"] = {
                     "verdict": "COMMENT", "confidence": 0.0,
                     "certainty": "significant_uncertainty",
-                    "summary": "AI deep review rate-limited mid-loop. Re-run later.",
+                    "summary": "Standard deep review rate-limited.",
                     "comments": [], "fixes_to_push": [],
-                    "tokens_in_total": 0, "tokens_out_total": 0,
-                    "tool_calls_used": 0, "rate_limit_remaining": 0,
-                    "tool_calls_exhausted": False,
                 }
             except (ModelsHTTPError, RuntimeError) as e:
                 vs.llm_crashed = True
-                pass2 = {
+                branch_outputs["standard"] = {
                     "verdict": "COMMENT", "confidence": 0.0,
                     "certainty": "significant_uncertainty",
-                    "summary": f"AI deep review crashed: {e}",
+                    "summary": f"Standard deep review crashed: {e}",
                     "comments": [], "fixes_to_push": [],
-                    "tokens_in_total": 0, "tokens_out_total": 0,
-                    "tool_calls_used": 0, "rate_limit_remaining": None,
-                    "tool_calls_exhausted": False,
                 }
+
+            # specialized branches
+            if "migration_deep" in selected:
+                branch_outputs["migration_deep"] = run_migration_branch(
+                    pr=pr, repo_root=str(repo_root), token=token,
+                )
+            if "security" in selected:
+                branch_outputs["security"] = run_security_branch(
+                    pr=pr, repo_root=str(repo_root), token=token,
+                )
+            if "cross_pr_conflict" in selected:
+                # Most consumer PRs target main; consumer can override later if needed
+                base_branch = "main"
+                branch_outputs["cross_pr_conflict"] = run_cross_pr_branch(
+                    repo=args.repo, base=base_branch,
+                    current_pr=pr["pr_number"],
+                    current_files=set(pr["changed_files"]),
+                )
+            if "test_stubs" in selected:
+                branch_outputs["test_stubs"] = run_test_stubs_branch(
+                    diff=pr.get("diff", ""), token=token,
+                )
+
+            # aggregate
+            pass2 = aggregate_branch_verdicts(branch_outputs)
+            for branch_name, output in branch_outputs.items():
+                meta = []
+                if "verdict" in output:
+                    meta.append(f"verdict={output['verdict']}")
+                if "confidence" in output:
+                    meta.append(f"confidence={output['confidence']}")
+                meta.append(f"comments={len(output.get('comments', []))}")
+                sections[f"Branch: {branch_name}"] = " ".join(meta)
 
         # 6. AUTO-FIX (smart hybrid)
         ai_fixed_label_present = "ai-fixed" in pr["labels"]

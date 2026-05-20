@@ -53,3 +53,16 @@ Every comment must include `file`, `line` (1-indexed), `expected_text`
 ## Project lessons (from docs/ai-approve/lessons.md)
 
 {{LESSONS_FILE_CONTENT_INSERTED_HERE_AT_RUNTIME}}
+
+## Project conventions (from CLAUDE.md, injected at runtime)
+
+The full project CLAUDE.md is provided as a separate section of your
+user message. It contains the project's design tokens, branching
+convention, file organization rules, and other conventions. When
+reviewing changes, prefer specific references to CLAUDE.md sections
+("per CLAUDE.md design tokens, the color should use `var(--ink)` not
+`#000`") over generic Django/Vue advice.
+
+If a change appears to violate CLAUDE.md, that is automatically a
+`major` severity issue unless the PR body explicitly justifies the
+deviation.

@@ -117,26 +117,27 @@ HARD_BLOCK_RULES: list[dict] = [
     {
         "id": "large_diff",
         "kind": "size",
-        "check": lambda files_n, lines_n: files_n > 50 or lines_n > 2000,
+        # Returns True (hard-block), "borderline" (near threshold), or False
+        "check": lambda files_n, lines_n: (
+            True if (files_n > 50 or lines_n > 2000)
+            else ("borderline" if (files_n >= 45 or lines_n >= 1800) else False)
+        ),
         "reason": (
             "PR exceeds 50 files or 2000 lines — too large for "
             "safe auto-review."
+        ),
+        "borderline_reason": (
+            "PR near the large-diff threshold (45-50 files or 1800-2000 lines) — "
+            "borderline; escalating to reasoning model."
         ),
     },
 ]
 
 
 def evaluate(pr_metadata: dict) -> dict:
-    """Return {hard_blocked, reasons, rule_ids}.
-
-    pr_metadata keys:
-      - changed_files: list[str]
-      - diff_added_lines: list[str]
-      - diff_removed_lines: list[str]
-      - files_changed: int
-      - lines_changed: int
-    """
+    """Return {hard_blocked, reasons, rule_ids, borderline, borderline_reasons}."""
     triggered: list[dict] = []
+    borderline_rules: list[dict] = []
     paths = pr_metadata["changed_files"]
     added = pr_metadata["diff_added_lines"]
     removed = pr_metadata["diff_removed_lines"]
@@ -157,11 +158,16 @@ def evaluate(pr_metadata: dict) -> dict:
             hit = rule["check"](files_n, lines_n)
         else:
             raise ValueError(f"unknown rule kind: {kind!r}")
-        if hit:
+
+        if hit is True:
             triggered.append(rule)
+        elif hit == "borderline":
+            borderline_rules.append(rule)
 
     return {
         "hard_blocked": bool(triggered),
         "reasons": [r["reason"] for r in triggered],
         "rule_ids": [r["id"] for r in triggered],
+        "borderline": bool(borderline_rules) and not bool(triggered),
+        "borderline_reasons": [r.get("borderline_reason", r["reason"]) for r in borderline_rules],
     }

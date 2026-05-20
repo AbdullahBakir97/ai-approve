@@ -75,17 +75,11 @@ def render_body(
 
 APPROVE_FALLBACK_NOTE = (
     "\n\n---\n"
-    "**⚠️ Note on verdict:** The bot wanted to post `APPROVE` but the "
-    "review API returned HTTP 422. Two known causes:\n\n"
-    "1. **`GITHUB_TOKEN` cannot post APPROVE reviews** — documented "
-    "GitHub limitation. Fix: set a `PR_REVIEW_TOKEN` repo secret "
-    "(fine-grained PAT, `Pull requests: write`).\n\n"
-    "2. **A user-account PAT cannot APPROVE the same user's own PR** "
-    "— GitHub blocks self-approval. Fix: graduate to a dedicated "
-    "GitHub App with `pull_requests:write` installed on the repo, OR "
-    "ask another collaborator to approve.\n\n"
-    "Posted as `COMMENT` instead so the review isn't lost. Auto-merge "
-    "won't fire until `reviewDecision == APPROVED`."
+    "**⚠️ Note:** The bot wanted to post `APPROVE` but the review API "
+    "returned HTTP 422. Posted as `COMMENT` so the review isn't lost. "
+    "Most likely cause: the App lost write permissions on this repo "
+    "(reinstall via the App settings) or the PR state changed during "
+    "review. Re-trigger via `/ai-review` after fixing."
 )
 
 
