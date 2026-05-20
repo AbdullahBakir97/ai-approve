@@ -50,22 +50,21 @@ def _system_prompt(lessons_md: str) -> str:
 
 
 def _user_prompt(pr: dict, deep_files_content: dict[str, str]) -> str:
-    # Note: CLAUDE.md is deliberately NOT included here. It's ~33KB
-    # (~8K tokens) — alone exceeds the GitHub Models free-tier 8K
-    # request limit. Project-specific conventions are funneled through
-    # the lessons.md injection in the SYSTEM prompt instead, which
-    # grows over time as the retrospective adds them.
+    # Plan 2: gpt-4.1 has 1M context. CLAUDE.md is back — the bot now sees
+    # the project's full conventions.
     deep_block = "\n\n".join(
         f"=== {path} ===\n{content}" for path, content in deep_files_content.items()
     ) or "(none)"
     audit = pr.get("audit_doc") or "(none referenced)"
     body = pr.get("body") or "(empty)"
+    claude_md = pr.get("claude_md") or "(CLAUDE.md not found)"
     return (
         f"PR #{pr['pr_number']}: {pr['title']}\n\n"
         f"Body:\n{body}\n\n"
         f"Linked audit doc:\n{audit}\n\n"
         f"=== DIFF ===\n{pr['diff']}\n\n"
-        f"=== DEEP-REVIEW FILES ===\n{deep_block}\n"
+        f"=== DEEP-REVIEW FILES ===\n{deep_block}\n\n"
+        f"=== CLAUDE.md (PROJECT CONVENTIONS) ===\n{claude_md}\n"
     )
 
 
