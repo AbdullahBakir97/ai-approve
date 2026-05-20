@@ -100,3 +100,35 @@ def test_empty_branches_dict():
     assert result["verdict"] == "COMMENT"
     assert result["confidence"] == 1.0
     assert result["comments"] == []
+
+
+def test_aggregator_propagates_standard_telemetry():
+    branches = {
+        "standard": {
+            "verdict": "APPROVE", "confidence": 0.9, "certainty": "fully_understood",
+            "summary": "ok", "comments": [], "fixes_to_push": [],
+            "tokens_in_total": 12345, "tokens_out_total": 678,
+            "tool_calls_used": 5, "rate_limit_remaining": 47,
+            "tool_calls_exhausted": False,
+        },
+        "security": {
+            "verdict": "APPROVE", "confidence": 0.9, "certainty": "fully_understood",
+            "summary": "ok", "comments": [], "fixes_to_push": [],
+        },
+    }
+    result = aggregate_branch_verdicts(branches)
+    assert result["tokens_in_total"] == 12345
+    assert result["tokens_out_total"] == 678
+    assert result["tool_calls_used"] == 5
+    assert result["rate_limit_remaining"] == 47
+    assert result["tool_calls_exhausted"] is False
+
+
+def test_aggregator_handles_unknown_certainty_value_without_crashing():
+    branches = {
+        "standard": make_branch(certainty="fully_understood"),
+        "security": make_branch(certainty="future_value_not_in_schema"),
+    }
+    # Should not raise TypeError. Unknown values rank as max-uncertain.
+    result = aggregate_branch_verdicts(branches)
+    assert result["certainty"] == "future_value_not_in_schema"

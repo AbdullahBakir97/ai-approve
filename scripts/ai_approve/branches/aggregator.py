@@ -50,13 +50,21 @@ def aggregate_branch_verdicts(branches: dict[str, dict]) -> dict:
     comments only — they don't influence the verdict/confidence aggregation.
     """
     verdicts = [b["verdict"] for b in branches.values() if "verdict" in b]
-    final_verdict = max(verdicts, key=_VERDICT_RANK.get, default="COMMENT")
+    final_verdict = max(
+        verdicts,
+        key=lambda v: _VERDICT_RANK.get(v, 2),  # unknown verdict → strictest
+        default="COMMENT",
+    )
 
     confidences = [b.get("confidence", 1.0) for b in branches.values() if "verdict" in b]
     final_confidence = min(confidences, default=1.0)
 
     certainties = [b.get("certainty", "fully_understood") for b in branches.values() if "verdict" in b]
-    final_certainty = max(certainties, key=_CERTAINTY_RANK.get, default="fully_understood")
+    final_certainty = max(
+        certainties,
+        key=lambda c: _CERTAINTY_RANK.get(c, 2),  # unknown certainty → most uncertain
+        default="fully_understood",
+    )
 
     all_comments: list[dict] = []
     for b in branches.values():
@@ -75,6 +83,18 @@ def aggregate_branch_verdicts(branches: dict[str, dict]) -> dict:
             summary_parts.append(f"**{name}**: {s}")
     final_summary = "\n\n".join(summary_parts) if summary_parts else "(no branch produced a summary)"
 
+    # Telemetry pass-through: forward from the "standard" branch since
+    # it's the only one that runs the agentic loop and emits these.
+    # Other branches don't have tool budgets or accumulated token counts.
+    standard = branches.get("standard", {})
+    telemetry = {
+        "tokens_in_total":      standard.get("tokens_in_total", 0),
+        "tokens_out_total":     standard.get("tokens_out_total", 0),
+        "tool_calls_used":      standard.get("tool_calls_used", 0),
+        "rate_limit_remaining": standard.get("rate_limit_remaining"),
+        "tool_calls_exhausted": standard.get("tool_calls_exhausted", False),
+    }
+
     return {
         "verdict": final_verdict,
         "confidence": final_confidence,
@@ -82,4 +102,5 @@ def aggregate_branch_verdicts(branches: dict[str, dict]) -> dict:
         "summary": final_summary,
         "comments": final_comments,
         "fixes_to_push": final_fixes,
+        **telemetry,
     }
