@@ -1,9 +1,9 @@
 """Step 8 (also) — append this run's outcome to docs/ai-approve/calibration.json."""
 from __future__ import annotations
-import json
-from datetime import datetime, timezone
-from pathlib import Path
 
+import json
+from datetime import UTC, datetime
+from pathlib import Path
 
 CALIBRATION_PATH = Path("docs/ai-approve/calibration.json")
 
@@ -28,7 +28,7 @@ def load() -> dict:
 
 
 def save(data: dict) -> None:
-    data["generated_at"] = datetime.now(timezone.utc).isoformat()
+    data["generated_at"] = datetime.now(UTC).isoformat()
     CALIBRATION_PATH.parent.mkdir(parents=True, exist_ok=True)
     CALIBRATION_PATH.write_text(
         json.dumps(data, indent=2, sort_keys=True) + "\n",

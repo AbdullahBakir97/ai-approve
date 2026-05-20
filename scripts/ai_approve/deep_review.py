@@ -8,11 +8,14 @@ message telling it to produce the JSON now with whatever evidence it has,
 and the conservative_gate will downgrade verdict via tool_calls_exhausted.
 """
 from __future__ import annotations
+
 import json
 from pathlib import Path
-from jsonschema import validate as jsonschema_validate, ValidationError
 
-from .models_client import chat_completion, RateLimitedError, ModelsHTTPError
+from jsonschema import ValidationError
+from jsonschema import validate as jsonschema_validate
+
+from .models_client import chat_completion
 from .tools import TOOL_SCHEMAS, dispatch
 
 HERE = Path(__file__).parent

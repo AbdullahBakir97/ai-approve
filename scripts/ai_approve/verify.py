@@ -8,9 +8,9 @@ prompt forbids. Mechanical regex; no LLM involved. If any matches,
 the conservative_gate downgrades verdict.
 """
 from __future__ import annotations
-import re
-from typing import Callable
 
+import re
+from collections.abc import Callable
 
 FORBIDDEN_PHRASES: list[str] = [
     "presumably",

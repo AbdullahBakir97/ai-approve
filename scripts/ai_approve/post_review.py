@@ -5,6 +5,7 @@ REQUEST_CHANGES | COMMENT, body = our structured markdown, and an inline
 comment per surviving comment.
 """
 from __future__ import annotations
+
 import json
 import os
 import subprocess
@@ -27,7 +28,7 @@ def render_body(
     kept = pass2.get("comments", [])
 
     lines = [
-        f"## AI Review — Al-Malakia",
+        "## AI Review — Al-Malakia",
         "",
         f"**Verdict:** {icon} {verdict} "
         f"(confidence {confidence}, certainty {certainty})",

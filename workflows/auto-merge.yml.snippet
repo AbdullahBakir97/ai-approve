@@ -1,0 +1,34 @@
+# auto-merge.yml patch for consumer repos
+
+If your repo doesn't yet have an auto-merge workflow, you can model one on
+`abaya-almalakia/.github/workflows/auto-merge.yml`. If it does, add these gates:
+
+1. Add `AI Approve` to the `workflow_run` workflows list so auto-merge re-evaluates after the bot posts:
+
+```yaml
+on:
+  workflow_run:
+    workflows: [Backend Tests, AI Approve]
+    types: [completed]
+```
+
+2. Add the `reviewDecision == APPROVED` gate and the `needs-human` skip. After the existing PR-data lookup:
+
+```diff
+- data=$(gh pr view "$pr" --repo "$REPO" --json state,isDraft,mergeable,labels,headRefOid)
++ data=$(gh pr view "$pr" --repo "$REPO" --json state,isDraft,mergeable,labels,headRefOid,reviewDecision)
+
+  ...
+
++ review_decision=$(echo "$data" | jq -r '.reviewDecision // "NONE"')
++ has_needs_human=$(echo "$data" | jq -r '[.labels[].name] | index("needs-human") // "" | tostring')
+
++ if [ "$has_needs_human" != "" ] && [ "$has_needs_human" != "null" ]; then
++   echo "  -> needs-human label, skipping"; continue
++ fi
++ if [ "$review_decision" != "APPROVED" ]; then
++   echo "  -> reviewDecision=$review_decision (need APPROVED), skipping"; continue
++ fi
+```
+
+These patches already landed in abaya-almalakia via PR #57. New consumers should follow this snippet.

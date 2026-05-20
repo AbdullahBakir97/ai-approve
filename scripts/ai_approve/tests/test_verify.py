@@ -1,8 +1,8 @@
 """Tests for verify.py — strips comments whose expected_text doesn't match."""
 from ai_approve.verify import (
-    verify_comments,
-    has_forbidden_phrase,
     FORBIDDEN_PHRASES,
+    has_forbidden_phrase,
+    verify_comments,
 )
 
 

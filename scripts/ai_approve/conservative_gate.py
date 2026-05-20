@@ -5,6 +5,7 @@ final_verdict(). Any failure mode that we did not anticipate defaults to
 COMMENT (the safest non-blocking option). See spec §12.
 """
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 

@@ -6,11 +6,16 @@ We mock `requests.post`. The wrapper is responsible for:
 - Returning a typed result with rate-limit info
 - Raising on transport errors
 """
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
+
 from ai_approve.models_client import (
-    chat_completion, ModelsResult,
-    RateLimitedError, ModelsHTTPError, ModelsSchemaError,
+    ModelsHTTPError,
+    ModelsResult,
+    ModelsSchemaError,
+    RateLimitedError,
+    chat_completion,
 )
 
 

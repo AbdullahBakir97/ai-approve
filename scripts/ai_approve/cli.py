@@ -9,6 +9,7 @@ Expected failure paths (rate limit, schema fail, etc.) still exit 0 — the
 review body explains.
 """
 from __future__ import annotations
+
 import argparse
 import os
 import sys
@@ -16,18 +17,18 @@ import traceback
 from pathlib import Path
 
 from . import calibration, summary
+from .apply_fixes import apply_fixes
 from .conservative_gate import VerifierState, final_verdict
+from .critique import run_critique
 from .deep_review import run_deep_review
 from .gather import gather
 from .hard_blocks import evaluate as evaluate_hard_blocks
-from .models_client import RateLimitedError, ModelsHTTPError
-from .post_review import post_review, render_body, inline_body_for_comment
+from .models_client import ModelsHTTPError, RateLimitedError
+from .post_review import inline_body_for_comment, post_review, render_body
 from .skip_checks import should_skip
-from .state import empty_state, embed_in_comment, extract_from_comment
+from .state import embed_in_comment, empty_state, extract_from_comment
 from .triage import run_triage
-from .verify import verify_comments, has_forbidden_phrase, FORBIDDEN_PHRASES
-from .critique import run_critique
-from .apply_fixes import apply_fixes
+from .verify import has_forbidden_phrase, verify_comments
 
 
 def _gh_get_state_comment(repo: str, pr_number: int, token: str) -> tuple[int | None, dict | None]:

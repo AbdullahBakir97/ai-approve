@@ -7,6 +7,7 @@ fetch it, so without the stderr mirror there's no way to debug a
 silently-failing run.
 """
 from __future__ import annotations
+
 import os
 import sys
 from pathlib import Path

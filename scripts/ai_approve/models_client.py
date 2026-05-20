@@ -5,11 +5,11 @@ Auth: Bearer GITHUB_TOKEN
 Free tier; rate-limited via x-ratelimit-* headers.
 """
 from __future__ import annotations
-import json
+
 from dataclasses import dataclass
 from typing import Any
-import requests
 
+import requests
 
 ENDPOINT = "https://models.inference.ai.azure.com/chat/completions"
 TIMEOUT_SECS = 90

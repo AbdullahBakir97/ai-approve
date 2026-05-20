@@ -8,6 +8,7 @@ All paths are RESOLVED RELATIVE TO REPO ROOT. We refuse paths outside
 the repo (no `..` escape) and refuse to read files larger than 256 KB.
 """
 from __future__ import annotations
+
 import re
 import subprocess
 from pathlib import Path
