@@ -18,6 +18,7 @@ from pathlib import Path
 
 from . import calibration, summary
 from .apply_fixes import apply_fixes
+from .config import trim_caps
 from .branches.aggregator import aggregate_branch_verdicts
 from .branches.cross_pr import run_cross_pr_branch
 from .branches.dispatcher import select_branches
@@ -221,31 +222,27 @@ def main() -> int:
             if lessons_md and len(lessons_md) > 1500:
                 lessons_md = lessons_md[:1500] + "\n[... lessons truncated ...]"
 
-            # Plan 2 (corrected): Llama 3.1 405B has 128K context (not the 1M
-            # we initially hoped for with the non-existent gpt-4.1). These caps
-            # leave comfortable headroom for system prompt + tool schemas +
-            # multi-turn agentic conversation.
-            MAX_CLAUDE_MD_CHARS  = 30000   # ~7.5K tokens
-            MAX_AUDIT_DOC_CHARS  = 8000
-            MAX_DIFF_CHARS_PASS2 = 60000   # ~15K tokens
-            MAX_DEEP_FILE_CHARS  = 10000
-            MAX_DEEP_FILES       = 5       # was 10
-            MAX_BODY_CHARS       = 4000
+            # Trim caps are tier-aware — see config.py. Free tier (default)
+            # fits the 8K-input-token GH Models cap; AI_APPROVE_TIER=paid
+            # lifts caps so CLAUDE.md + full diff + deep files all ride along.
+            caps = trim_caps()
 
-            if pr.get("claude_md") and len(pr["claude_md"]) > MAX_CLAUDE_MD_CHARS:
-                pr["claude_md"] = pr["claude_md"][:MAX_CLAUDE_MD_CHARS] + "\n[... truncated ...]"
-            if pr.get("body") and len(pr["body"]) > MAX_BODY_CHARS:
-                pr["body"] = pr["body"][:MAX_BODY_CHARS] + "\n[... body truncated ...]"
-            if pr.get("audit_doc") and len(pr["audit_doc"]) > MAX_AUDIT_DOC_CHARS:
-                pr["audit_doc"] = pr["audit_doc"][:MAX_AUDIT_DOC_CHARS] + "\n[... truncated ...]"
-            if pr.get("diff") and len(pr["diff"]) > MAX_DIFF_CHARS_PASS2:
-                pr["diff"] = pr["diff"][:MAX_DIFF_CHARS_PASS2] + "\n[... diff truncated ...]"
+            if caps.claude_md == 0:
+                pr["claude_md"] = ""
+            elif pr.get("claude_md") and len(pr["claude_md"]) > caps.claude_md:
+                pr["claude_md"] = pr["claude_md"][:caps.claude_md] + "\n[... truncated ...]"
+            if pr.get("body") and len(pr["body"]) > caps.body:
+                pr["body"] = pr["body"][:caps.body] + "\n[... body truncated ...]"
+            if pr.get("audit_doc") and len(pr["audit_doc"]) > caps.audit_doc:
+                pr["audit_doc"] = pr["audit_doc"][:caps.audit_doc] + "\n[... truncated ...]"
+            if pr.get("diff") and len(pr["diff"]) > caps.diff_pass2:
+                pr["diff"] = pr["diff"][:caps.diff_pass2] + "\n[... diff truncated ...]"
 
             deep_files_content = {}
-            for fp in (triage.get("deep_review_files") or [])[:MAX_DEEP_FILES]:
+            for fp in (triage.get("deep_review_files") or [])[:caps.deep_files]:
                 p_path = repo_root / fp
                 if p_path.exists() and p_path.is_file():
-                    deep_files_content[fp] = p_path.read_text(encoding="utf-8", errors="replace")[:MAX_DEEP_FILE_CHARS]
+                    deep_files_content[fp] = p_path.read_text(encoding="utf-8", errors="replace")[:caps.deep_file]
 
             # PLAN 2: dispatch multiple specialized review branches in addition to standard
             selected = select_branches({"changed_files": pr["changed_files"]})
