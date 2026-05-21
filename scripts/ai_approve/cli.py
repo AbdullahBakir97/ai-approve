@@ -19,6 +19,7 @@ from pathlib import Path
 from . import calibration, summary
 from .apply_fixes import apply_fixes
 from .branches.aggregator import aggregate_branch_verdicts
+from .labels import apply_labels
 from .branches.cross_pr import run_cross_pr_branch
 from .branches.dispatcher import select_branches
 from .branches.migration import run_migration_branch
@@ -419,6 +420,24 @@ def main() -> int:
             sections["Post review"] = f"FAILED: {e}"
             summary.emit(sections)
             return 0  # don't fail workflow — review will retry on next trigger
+
+        # 8b. APPLY OUTCOME LABELS — non-fatal: label-step failures don't
+        # block state persistence or fail the workflow. Uses the App
+        # token (review_token) when present so labels show as bot-owned.
+        try:
+            label_result = apply_labels(
+                repo=args.repo, pr_number=args.pr,
+                verdict=verdict,
+                has_fixes=bool(fix_result and fix_result.get("acted")),
+                hard_blocked=hb["hard_blocked"],
+                token=(review_token or token),
+            )
+            sections["Labels"] = (
+                f"applied={','.join(label_result.applied) or '(none)'}; "
+                f"removed_stale={','.join(label_result.removed) or '(none)'}"
+            )
+        except Exception as e:
+            sections["Labels"] = f"label step failed (non-fatal): {e}"
 
         # Persist state + calibration
         state["last_reviewed_sha"] = pr["head_sha"]
