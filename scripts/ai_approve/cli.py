@@ -18,13 +18,13 @@ from pathlib import Path
 
 from . import calibration, summary
 from .apply_fixes import apply_fixes
-from .config import trim_caps
 from .branches.aggregator import aggregate_branch_verdicts
 from .branches.cross_pr import run_cross_pr_branch
 from .branches.dispatcher import select_branches
 from .branches.migration import run_migration_branch
 from .branches.security import run_security_branch
 from .branches.test_stubs import run_test_stubs_branch
+from .config import trim_caps
 from .conservative_gate import VerifierState, final_verdict
 from .critique import run_critique
 from .deep_review import run_deep_review
