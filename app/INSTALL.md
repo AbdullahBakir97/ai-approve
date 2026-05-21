@@ -61,3 +61,27 @@ After the review posts, the PR is labeled with one of:
 | `bot-fixes` | Bot auto-pushed fixes to the PR head |
 
 Labels are auto-created on first use and idempotent — re-running the bot replaces stale `bot-*` labels with the current outcome.
+
+### Category / priority labels (single source of truth)
+
+If your repo has a `.github/labeler.yml` file (same format `actions/labeler@v5` reads), the bot also applies category and priority labels from those rules on every review — independently of whether the `actions/labeler` workflow itself is wired up. That means PRs against any track branch get fully labeled, not just branches where the labeler workflow happens to be propagated.
+
+Supported rule shapes (the subset this project uses):
+
+```yaml
+backend:
+  - changed-files:
+    - any-glob-to-any-file: 'backend/**'
+
+fullstack:
+  - all:
+    - changed-files:
+      - any-glob-to-any-file: 'backend/**'
+    - changed-files:
+      - any-glob-to-any-file: 'frontend/**'
+
+p1:
+  - head-branch: '^feat/(backend|frontend|fullstack)/p1-'
+```
+
+The bot only manages labels it can see in `.github/labeler.yml` plus the `bot-*` set — manually-added labels (or labels from other automations) are left alone. If `.github/labeler.yml` is absent or PyYAML isn't installed, the bot silently falls back to `bot-*` labels only.

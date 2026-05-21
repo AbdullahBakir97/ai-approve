@@ -30,6 +30,7 @@ from .critique import run_critique
 from .deep_review import run_deep_review
 from .gather import gather
 from .hard_blocks import evaluate as evaluate_hard_blocks
+from .labeler_rules import load_labeler_config, select_category_labels
 from .labels import apply_labels
 from .models_client import ModelsHTTPError, RateLimitedError
 from .post_review import inline_body_for_comment, post_review, render_body
@@ -418,20 +419,35 @@ def main() -> int:
             summary.emit(sections)
             return 0  # don't fail workflow — review will retry on next trigger
 
-        # 8b. APPLY OUTCOME LABELS — non-fatal: label-step failures don't
-        # block state persistence or fail the workflow. Uses the App
-        # token (review_token) when present so labels show as bot-owned.
+        # 8b. APPLY OUTCOME + CATEGORY LABELS — non-fatal: label-step
+        # failures don't block state persistence or fail the workflow.
+        # Uses the App token (review_token) when present so labels show
+        # as bot-owned.
+        #
+        # Category labels come from the consumer repo's `.github/labeler.yml`
+        # (the same file actions/labeler@v5 reads); the bot mirrors that
+        # rule set so PRs against any track branch get category labels too,
+        # regardless of whether the labeler workflow is propagated there.
         try:
+            labeler_cfg = load_labeler_config(repo_root)
+            extra_labels = select_category_labels(
+                labeler_cfg,
+                files=pr["changed_files"],
+                head_branch=pr.get("head_ref_name", ""),
+            )
             label_result = apply_labels(
                 repo=args.repo, pr_number=args.pr,
                 verdict=verdict,
                 has_fixes=bool(fix_result and fix_result.get("acted")),
                 hard_blocked=hb["hard_blocked"],
                 token=(review_token or token),
+                extra_labels=extra_labels,
+                managed_extra_labels=set(labeler_cfg.keys()) if labeler_cfg else None,
             )
             sections["Labels"] = (
                 f"applied={','.join(label_result.applied) or '(none)'}; "
-                f"removed_stale={','.join(label_result.removed) or '(none)'}"
+                f"removed_stale={','.join(label_result.removed) or '(none)'} "
+                f"(category rules: {len(labeler_cfg)} from labeler.yml)"
             )
         except Exception as e:
             sections["Labels"] = f"label step failed (non-fatal): {e}"

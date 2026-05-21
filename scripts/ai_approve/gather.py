@@ -47,6 +47,7 @@ def gather(repo: str, pr_number: int) -> dict:
         "title": str,
         "body": str,
         "head_sha": str,
+        "head_ref_name": str,         # branch name (for category-label regex rules)
         "base_sha": str,
         "labels": list[str],
         "is_draft": bool,
@@ -71,10 +72,11 @@ def gather(repo: str, pr_number: int) -> dict:
     meta_json = run_gh([
         "pr", "view", str(pr_number), "--repo", repo,
         "--json",
-        "title,body,headRefOid,baseRefOid,labels,isDraft,author,files,commits",
+        "title,body,headRefName,headRefOid,baseRefOid,labels,isDraft,author,files,commits",
     ])
     meta = json.loads(meta_json)
 
+    head_ref_name = meta.get("headRefName") or ""
     head_sha = meta["headRefOid"]
     base_sha = meta["baseRefOid"]
     title = meta.get("title", "")
@@ -128,6 +130,7 @@ def gather(repo: str, pr_number: int) -> dict:
         "title": title,
         "body": body,
         "head_sha": head_sha,
+        "head_ref_name": head_ref_name,
         "base_sha": base_sha,
         "labels": labels,
         "is_draft": is_draft,
