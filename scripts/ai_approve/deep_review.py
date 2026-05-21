@@ -22,10 +22,14 @@ HERE = Path(__file__).parent
 PROMPT_PATH = HERE / "prompts" / "pass2_deep_review_system.md"
 SCHEMA_PATH = HERE / "schemas" / "pass2_deep_review.json"
 
-# Plan 2: gpt-4.1 has 1M context; Llama 3.1 405B (128K) is the fallback when
-# OpenAI quota is exhausted. Both support function tool use.
-MODEL = "openai/gpt-4.1"
-FALLBACK_MODEL = "meta/Meta-Llama-3.1-405B-Instruct"
+# Plan 2: switched from gpt-4o (8K) to Llama 3.1 405B (128K) so we can include
+# CLAUDE.md + full diff + deep-review files without aggressive trimming. The
+# `openai/gpt-4.1*` IDs guessed in the original spec don't exist on GitHub
+# Models — Llama 3.1 405B is the largest-context free-tier model that actually
+# exists. Fallback to gpt-4o on rate-limit gives us a different provider quota
+# pool (though gpt-4o's 8K limit means context must be trimmed further then).
+MODEL = "Meta-Llama-3.1-405B-Instruct"
+FALLBACK_MODEL = "gpt-4o"
 MAX_TOOL_CALLS = 10
 
 
@@ -50,8 +54,8 @@ def _system_prompt(lessons_md: str) -> str:
 
 
 def _user_prompt(pr: dict, deep_files_content: dict[str, str]) -> str:
-    # Plan 2: gpt-4.1 has 1M context. CLAUDE.md is back — the bot now sees
-    # the project's full conventions.
+    # Plan 2: Llama 3.1 405B's 128K context lets CLAUDE.md ride along,
+    # so the bot sees the project's full conventions.
     deep_block = "\n\n".join(
         f"=== {path} ===\n{content}" for path, content in deep_files_content.items()
     ) or "(none)"

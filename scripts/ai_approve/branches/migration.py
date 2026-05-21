@@ -1,7 +1,7 @@
 """Migration deep-inspection branch — analyzes Django migration safety.
 
 Triggered when PR touches `backend/project/apps/*/migrations/*.py`.
-Reads migration file + affected models, asks LLM (gpt-4.1) to simulate
+Reads migration file + affected models, asks Llama 3.1 405B to simulate
 the schema change and flag dangerous patterns.
 """
 from __future__ import annotations
@@ -18,7 +18,9 @@ HERE = Path(__file__).parent.parent
 PROMPT_PATH = HERE / "prompts" / "branch_migration_system.md"
 SCHEMA_PATH = HERE / "schemas" / "branch_migration.json"
 
-MODEL = "openai/gpt-4.1"
+# `openai/gpt-4.1` from the original spec doesn't exist on GitHub Models.
+# Llama 3.1 405B is the largest-context (128K) model actually available.
+MODEL = "Meta-Llama-3.1-405B-Instruct"
 
 
 def _load_schema() -> dict:

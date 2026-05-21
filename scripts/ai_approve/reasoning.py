@@ -19,7 +19,12 @@ HERE = Path(__file__).parent
 PROMPT_PATH = HERE / "prompts" / "reasoning_borderline_system.md"
 SCHEMA_PATH = HERE / "schemas" / "reasoning_borderline.json"
 
-MODEL = "deepseek/DeepSeek-R1"
+# Spec hoped for DeepSeek-R1 reasoning model, but availability on GitHub Models
+# free tier is uncertain. gpt-4o is the safest known-available "thoughtful"
+# model for the borderline decision; if a real reasoning model is ever added
+# to free tier, swap here. Either way the function is fail-closed (default to
+# hard-block on any error).
+MODEL = "gpt-4o"
 
 
 def _load_schema() -> dict:
