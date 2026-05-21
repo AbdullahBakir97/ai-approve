@@ -19,7 +19,6 @@ from pathlib import Path
 from . import calibration, summary
 from .apply_fixes import apply_fixes
 from .branches.aggregator import aggregate_branch_verdicts
-from .labels import apply_labels
 from .branches.cross_pr import run_cross_pr_branch
 from .branches.dispatcher import select_branches
 from .branches.migration import run_migration_branch
@@ -30,6 +29,7 @@ from .critique import run_critique
 from .deep_review import run_deep_review
 from .gather import gather
 from .hard_blocks import evaluate as evaluate_hard_blocks
+from .labels import apply_labels
 from .models_client import ModelsHTTPError, RateLimitedError
 from .post_review import inline_body_for_comment, post_review, render_body
 from .reasoning import evaluate_borderline

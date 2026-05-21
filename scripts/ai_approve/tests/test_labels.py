@@ -11,7 +11,6 @@ import pytest
 
 from ai_approve.labels import LABEL_SPEC, select_labels
 
-
 HEX6 = re.compile(r"^[0-9a-fA-F]{6}$")
 
 
