@@ -24,8 +24,10 @@ HERE = Path(__file__).parent
 PROMPT_PATH = HERE / "prompts" / "pass1_triage_system.md"
 SCHEMA_PATH = HERE / "schemas" / "pass1_triage.json"
 
-# GitHub Models slug. Plan 2: nano has bigger context + generous low-tier quota.
-MODEL = "openai/gpt-4.1-nano"
+# GitHub Models slug. Plan 1's gpt-4o-mini still works fine for triage —
+# input is small (PR title + file list + commit messages), so the 8K-per-
+# request limit isn't a problem here. The big-context need is in Pass 2.
+MODEL = "gpt-4o-mini"
 
 
 def _load_schema() -> dict:

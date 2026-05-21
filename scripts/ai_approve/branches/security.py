@@ -1,7 +1,7 @@
 """Security-specialized review branch — OWASP top 10 + Django anti-patterns.
 
 Triggered when PR touches files matching auth/serializer/raw-SQL/middleware/
-settings patterns. Reads each in full, asks LLM (gpt-4.1) with a
+settings patterns. Reads each in full, asks Llama 3.1 405B with a
 security-focused system prompt.
 """
 from __future__ import annotations
@@ -18,7 +18,9 @@ HERE = Path(__file__).parent.parent
 PROMPT_PATH = HERE / "prompts" / "branch_security_system.md"
 SCHEMA_PATH = HERE / "schemas" / "branch_security.json"
 
-MODEL = "openai/gpt-4.1"
+# `openai/gpt-4.1` from the original spec doesn't exist on GitHub Models.
+# Llama 3.1 405B is the largest-context (128K) model actually available.
+MODEL = "Meta-Llama-3.1-405B-Instruct"
 
 
 def _load_schema() -> dict:

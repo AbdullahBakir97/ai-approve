@@ -1,6 +1,6 @@
 """Test stub suggestions branch — drafts pytest stubs for new public functions.
 
-LLM call: gpt-4.1-mini. Output is informational only — suggestions land as
+LLM call: gpt-4o-mini. Output is informational only — suggestions land as
 `severity: info` comments with `suggested_text` blocks. Aggregator never
 blocks merge on these.
 """
@@ -19,7 +19,9 @@ HERE = Path(__file__).parent.parent
 PROMPT_PATH = HERE / "prompts" / "branch_test_stubs_system.md"
 SCHEMA_PATH = HERE / "schemas" / "branch_test_stubs.json"
 
-MODEL = "openai/gpt-4.1-mini"
+# `openai/gpt-4.1-mini` from the original spec doesn't exist on GitHub Models.
+# gpt-4o-mini was Plan 1's known-good model for informational LLM calls.
+MODEL = "gpt-4o-mini"
 
 
 def _load_schema() -> dict:

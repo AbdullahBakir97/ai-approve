@@ -221,15 +221,15 @@ def main() -> int:
             if lessons_md and len(lessons_md) > 1500:
                 lessons_md = lessons_md[:1500] + "\n[... lessons truncated ...]"
 
-            # Plan 2: gpt-4.1 has 1M context. We no longer need aggressive
-            # trimming. Caps now match practical I/O budgets, not LLM request
-            # limits. CLAUDE.md is BACK in the Pass 2 user prompt — see
-            # deep_review._user_prompt (Task 19 re-enables it).
-            MAX_CLAUDE_MD_CHARS  = 50000   # full CLAUDE.md (~12K tokens)
-            MAX_AUDIT_DOC_CHARS  = 20000
-            MAX_DIFF_CHARS_PASS2 = 200000  # bumped to gather.py's hard cap
-            MAX_DEEP_FILE_CHARS  = 30000
-            MAX_DEEP_FILES       = 10      # back to schema max
+            # Plan 2 (corrected): Llama 3.1 405B has 128K context (not the 1M
+            # we initially hoped for with the non-existent gpt-4.1). These caps
+            # leave comfortable headroom for system prompt + tool schemas +
+            # multi-turn agentic conversation.
+            MAX_CLAUDE_MD_CHARS  = 30000   # ~7.5K tokens
+            MAX_AUDIT_DOC_CHARS  = 8000
+            MAX_DIFF_CHARS_PASS2 = 60000   # ~15K tokens
+            MAX_DEEP_FILE_CHARS  = 10000
+            MAX_DEEP_FILES       = 5       # was 10
             MAX_BODY_CHARS       = 4000
 
             if pr.get("claude_md") and len(pr["claude_md"]) > MAX_CLAUDE_MD_CHARS:
