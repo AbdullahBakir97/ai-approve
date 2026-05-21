@@ -30,6 +30,7 @@ from .critique import run_critique
 from .deep_review import run_deep_review
 from .gather import gather
 from .hard_blocks import evaluate as evaluate_hard_blocks
+from .labels import apply_labels
 from .models_client import ModelsHTTPError, RateLimitedError
 from .post_review import inline_body_for_comment, post_review, render_body
 from .reasoning import evaluate_borderline
@@ -416,6 +417,24 @@ def main() -> int:
             sections["Post review"] = f"FAILED: {e}"
             summary.emit(sections)
             return 0  # don't fail workflow — review will retry on next trigger
+
+        # 8b. APPLY OUTCOME LABELS — non-fatal: label-step failures don't
+        # block state persistence or fail the workflow. Uses the App
+        # token (review_token) when present so labels show as bot-owned.
+        try:
+            label_result = apply_labels(
+                repo=args.repo, pr_number=args.pr,
+                verdict=verdict,
+                has_fixes=bool(fix_result and fix_result.get("acted")),
+                hard_blocked=hb["hard_blocked"],
+                token=(review_token or token),
+            )
+            sections["Labels"] = (
+                f"applied={','.join(label_result.applied) or '(none)'}; "
+                f"removed_stale={','.join(label_result.removed) or '(none)'}"
+            )
+        except Exception as e:
+            sections["Labels"] = f"label step failed (non-fatal): {e}"
 
         # Persist state + calibration
         state["last_reviewed_sha"] = pr["head_sha"]

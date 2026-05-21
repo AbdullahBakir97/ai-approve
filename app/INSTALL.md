@@ -48,3 +48,16 @@ gh workflow run ai-approve.yml -f pr=<any PR>
 ```
 
 The bot should now post reviews as `ai-approve[bot]`, and APPROVE verdicts should succeed (no 422).
+
+After the review posts, the PR is labeled with one of:
+
+| Label | When |
+|---|---|
+| `bot-reviewed` | Always, when the bot completes a review (parent label) |
+| `bot-approved` | LLM verdict `APPROVE` |
+| `bot-changes-requested` | LLM verdict `REQUEST_CHANGES` |
+| `bot-comment` | LLM verdict `COMMENT` (uncertainty or skipped) |
+| `bot-hard-blocked` | Deterministic gate fired (secrets, large_diff, etc.); LLM skipped |
+| `bot-fixes` | Bot auto-pushed fixes to the PR head |
+
+Labels are auto-created on first use and idempotent — re-running the bot replaces stale `bot-*` labels with the current outcome.
