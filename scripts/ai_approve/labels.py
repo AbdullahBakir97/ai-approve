@@ -129,22 +129,47 @@ def apply_labels(
     has_fixes: bool,
     hard_blocked: bool,
     token: str,
+    extra_labels: set[str] | None = None,
+    managed_extra_labels: set[str] | None = None,
 ) -> LabelResult:
-    """Idempotently apply the verdict's label set to the PR.
+    """Idempotently apply both `bot-*` outcome labels and (optionally)
+    category/priority labels to the PR.
 
-    - Ensures every label in LABEL_SPEC exists (create or sync color/desc).
-    - Removes any stale `bot-*` labels currently on the PR that aren't in
+    - Ensures every `bot-*` label in LABEL_SPEC exists (create or sync
+      color/desc). Category labels are NOT auto-created here — the
+      bot trusts the consumer repo to have defined them already (the
+      existing actions/labeler workflow created them); foreign labels
+      added to a PR are also untouched.
+    - Removes stale `bot-*` labels currently on the PR that aren't in
       this run's outcome set, so re-running the bot replaces them cleanly.
-    - Adds the current outcome labels.
+    - If `managed_extra_labels` is given (typically the full set of names
+      defined in the consumer's `.github/labeler.yml`), category labels in
+      that namespace that aren't in `extra_labels` are also pruned.
+      Without `managed_extra_labels` provided, category labels are
+      additive-only (safer when the bot doesn't know the full universe
+      of category labels — won't accidentally remove a hand-applied tag).
+    - Adds whatever's missing from the union of bot + extra.
     """
-    want = set(select_labels(verdict=verdict, has_fixes=has_fixes, hard_blocked=hard_blocked))
+    bot_want = set(select_labels(
+        verdict=verdict, has_fixes=has_fixes, hard_blocked=hard_blocked,
+    ))
+    extras = set(extra_labels or ())
+    want = bot_want | extras
 
-    for name in want:
-        color, desc = LABEL_SPEC[name]
-        _ensure_label_exists(repo, name, color, desc, token)
+    # Create only the bot-* labels (we own those). Trust category labels
+    # already exist in the repo (the labeler workflow created them).
+    for name in bot_want:
+        if name in LABEL_SPEC:
+            color, desc = LABEL_SPEC[name]
+            _ensure_label_exists(repo, name, color, desc, token)
 
     current = set(_list_current_labels(repo, pr_number, token))
-    stale = {lab for lab in current if lab in LABEL_SPEC and lab not in want}
+
+    # Stale bot-* labels (always managed by the bot)
+    stale = {lab for lab in current if lab in LABEL_SPEC and lab not in bot_want}
+    # Stale category labels (only managed when explicit universe given)
+    if managed_extra_labels:
+        stale |= {lab for lab in current if lab in managed_extra_labels and lab not in extras}
     new = sorted(want - current)
 
     removed: list[str] = []
